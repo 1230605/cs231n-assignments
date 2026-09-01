@@ -1,0 +1,24 @@
+# CS231n 2026 本地环境依赖（已安装版本）
+# 说明：
+#   - PyTorch / torchvision 需用 CUDA 13.0 构建：
+#       pip install torch==2.13.0+cu130 torchvision==0.28.0+cu130 --index-url https://download.pytorch.org/whl/cu130
+#   - OpenAI CLIP 需从 GitHub 安装：
+#       pip install git+https://github.com/openai/CLIP.git
+numpy==2.4.6
+scipy==1.17.1
+matplotlib==3.11.1
+scikit-learn==1.9.0
+pillow==12.3.0
+imageio==2.37.4
+pandas==3.0.5
+tqdm==4.70.0
+Cython==3.3.0
+thop==0.1.1.post2209072238
+pyarrow==25.0.1
+opencv-python==5.0.0.93
+decord==0.6.0
+jupyter==1.1.1
+notebook==7.6.2
+jupyterlab==4.6.3
+ipykernel==7.3.0
+ipywidgets==8.1.9

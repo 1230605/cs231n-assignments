@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.egg-info/
+
+# conda 环境（全部在 E 盘项目内）
+.envs/
+
+# 数据集（大文件不入库；需要时用脚本重建/下载）
+data/
+**/datasets/cifar-10-batches-py/
+**/datasets/coco_captioning/
+**/datasets/imagenet_val_25.npz
+**/data/cifar-10-batches-py/
+**/data/coco_captioning/
+
+# 训练产物 / 提交产物
+**/cs231n/saved/*.npy
+best_*.npy
+a1_code_submission.zip
+a2_code_submission.zip
+a3_code_submission.zip
+a1_inline_submission.pdf
+a2_inline_submission.pdf
+a3_inline_submission.pdf
