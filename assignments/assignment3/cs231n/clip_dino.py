@@ -1,10 +1,16 @@
-from tensorflow.python.framework.ops import device_v2
+try:
+    from tensorflow.python.framework.ops import device_v2
+except ImportError:
+    device_v2 = None  # only needed for the DAVIS (DINO) part
 import torch
 import torch.nn as nn
 import numpy as np
 import clip
 from PIL import Image
-import tensorflow_datasets as tfds
+try:
+    import tensorflow_datasets as tfds
+except ImportError:
+    tfds = None  # only needed for the DAVIS (DINO) part
 from torchvision import transforms as T
 import cv2
 from tqdm.auto import tqdm
@@ -122,6 +128,8 @@ class CLIPImageRetriever:
   
 class DavisDataset:
     def __init__(self):
+        if tfds is None:
+            raise RuntimeError("DavisDataset requires tensorflow-datasets. Install with: pip install tensorflow-cpu tensorflow-datasets")
         self.davis = tfds.load('davis/480p', split='validation', as_supervised=False)
         self.img_tsfm = T.Compose([
             T.Resize((480, 480)), T.ToTensor(),

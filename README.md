@@ -38,7 +38,7 @@ E:\ScaleLab\CS231n\project\
 & "E:\ScaleLab\CS231n\project\.envs\cs231n\python.exe" -m jupyter lab "E:\ScaleLab\CS231n\project\assignments"
 ```
 
-打开任意作业的 notebook，内核选择 `Python 3.11 (cs231n)`，从第一个单元格开始依次运行即可。
+打开任意作业的 notebook（已默认绑定 `Python 3.11 (cs231n)` 内核），从第一个单元格开始依次运行即可。
 
 ## 数据集
 
@@ -84,3 +84,4 @@ conda create -p "E:\ScaleLab\CS231n\project\.envs\cs231n" python=3.11 -y --overr
 ```powershell
 & "E:\ScaleLab\CS231n\project\.envs\cs231n\python.exe" -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 ```
+
