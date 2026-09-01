@@ -64,6 +64,10 @@ class LinearClassifier(object):
             # Hint: Use np.random.choice to generate indices. Sampling with         #
             # replacement is faster than sampling without replacement.              #
             #########################################################################
+            # 有放回地随机采样 batch_size 个样本：np.random.choice 返回下标
+            sample_idx = np.random.choice(num_train, batch_size)
+            X_batch = X[sample_idx]
+            y_batch = y[sample_idx]
 
 
             # evaluate loss and gradient
@@ -75,6 +79,8 @@ class LinearClassifier(object):
             # TODO:                                                                 #
             # Update the weights using the gradient and the learning rate.          #
             #########################################################################
+            # 梯度下降更新：W <- W - lr * dW
+            self.W -= learning_rate * grad
 
 
             if verbose and it % 100 == 0:
@@ -101,6 +107,8 @@ class LinearClassifier(object):
         # TODO:                                                                   #
         # Implement this method. Store the predicted labels in y_pred.            #
         ###########################################################################
+        scores = X.dot(self.W)          # 所有样本对所有类别的打分 (N, C)
+        y_pred = np.argmax(scores, axis=1)  # 每行取分数最高的类别
 
         return y_pred
 

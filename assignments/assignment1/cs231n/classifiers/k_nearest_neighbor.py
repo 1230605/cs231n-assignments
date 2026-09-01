@@ -66,7 +66,7 @@ class KNearestNeighbor(object):
         """
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
-        dists = np.zeros((num_test, num_train))
+        dists = np.zeros((num_test, num_train)) #取出长宽，用一个空矩阵先分配内存占位
         for i in range(num_test):
             for j in range(num_train):
                 #####################################################################
@@ -75,7 +75,9 @@ class KNearestNeighbor(object):
                 # training point, and store the result in dists[i, j]. You should   #
                 # not use a loop over dimension, nor use np.linalg.norm().          #
                 #####################################################################
-                pass
+                # L2 距离公式（课程笔记）：sqrt(sum((I1^p - I2^p)^2))
+                dists[i, j] = np.sqrt(np.sum((X[i] - self.X_train[j]) ** 2)) 
+                #一个一个元素计算L2距离 得到一个新的距离矩阵
         return dists
 
     def compute_distances_one_loop(self, X):
@@ -95,7 +97,8 @@ class KNearestNeighbor(object):
             # points, and store the result in dists[i, :].                        #
             # Do not use np.linalg.norm().                                        #
             #######################################################################
-            pass
+            dists[i, :] = np.sqrt(np.sum((self.X_train - X[i]) ** 2, axis=1))
+            
         return dists
 
     def compute_distances_no_loops(self, X):
@@ -120,7 +123,11 @@ class KNearestNeighbor(object):
         #                                                                       #
         # HINT: Try to formulate the l2 distance using matrix multiplication    #
         #       and two broadcast sums.                                         #
-        #########################################################################
+        dists = np.sqrt(
+            np.sum(X ** 2, axis=1, keepdims=True)   # ||测试点||^2，形状 (num_test, 1)
+            + np.sum(self.X_train ** 2, axis=1)     # ||训练点||^2，形状 (num_train,)
+            - 2 * (X @ self.X_train.T)              # 交叉项 2*X·Xtr^T，形状 (num_test, num_train)
+        )
 
         return dists
 
@@ -150,6 +157,8 @@ class KNearestNeighbor(object):
             # neighbors. Store these labels in closest_y.                           #
             # Hint: Look up the function numpy.argsort.                             #
             #########################################################################
+            nearest_idx = np.argsort(dists[i])[:k]       # 距离升序排列，取前 k 个训练点下标
+            closest_y = list(self.y_train[nearest_idx])  # 换成这 k 个邻居的标签
 
 
             #########################################################################
@@ -159,6 +168,8 @@ class KNearestNeighbor(object):
             # Store this label in y_pred[i]. Break ties by choosing the smaller     #
             # label.                                                                #
             #########################################################################
+            counts = np.bincount(closest_y)              # 统计每个标签出现次数
+            y_pred[i] = np.argmax(counts)                # 取出现最多的标签；平局时自动取较小值
 
 
         return y_pred

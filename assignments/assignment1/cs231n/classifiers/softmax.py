@@ -40,50 +40,42 @@ def softmax_loss_naive(W, X, y, reg):
 
         loss -= logp[y[i]]  # negative log probability is the loss
 
+        # 梯度（与 loss 同步计算）：dLi/dW = x_i^T (p - onehot(y_i))
+        # 概率向量在正确类别处减 1，就等价于 p - onehot
+        p[y[i]] -= 1
+        # 外积 x_i (D,) ⊗ (p - onehot) (C,) -> (D, C)，累加进 dW
+        dW += np.outer(X[i], p)
 
-    # normalized hinge loss plus regularization
+    # normalized softmax loss plus regularization
     loss = loss / num_train + reg * np.sum(W * W)
 
-    #############################################################################
-    # TODO:                                                                     #
-    # Compute the gradient of the loss function and store it dW.                #
-    # Rather that first computing the loss and then computing the derivative,   #
-    # it may be simpler to compute the derivative at the same time that the     #
-    # loss is being computed. As a result you may need to modify some of the    #
-    # code above to compute the gradient.                                       #
-    #############################################################################
-
+    # 梯度平均化 + L2 正则项的梯度 2λW
+    dW = dW / num_train + 2 * reg * W
 
     return loss, dW
-
-
 def softmax_loss_vectorized(W, X, y, reg):
     """
     Softmax loss function, vectorized version.
 
     Inputs and outputs are the same as softmax_loss_naive.
     """
-    # Initialize the loss and gradient to zero.
-    loss = 0.0
-    dW = np.zeros_like(W)
+    num_train = X.shape[0]
+    num_classes = W.shape[1]
 
+    # 一次算出所有样本对所有类别的打分：X (N, D) @ W (D, C) -> (N, C)
+    scores = X.dot(W)
+    # 数值稳定：每行减去该行最大值；keepdims 保留 (N, 1) 以便广播
+    scores -= np.max(scores, axis=1, keepdims=True)
+    # softmax：逐行 exp，再除以该行的概率和
+    p = np.exp(scores)
+    p /= np.sum(p, axis=1, keepdims=True)
 
-    #############################################################################
-    # TODO:                                                                     #
-    # Implement a vectorized version of the softmax loss, storing the           #
-    # result in loss.                                                           #
-    #############################################################################
+    # 交叉熵损失：取每行正确类别的概率，负对数，求平均 + L2 正则
+    correct_logp = -np.log(p[np.arange(num_train), y])
+    loss = correct_logp.sum() / num_train + reg * np.sum(W * W)
 
-
-    #############################################################################
-    # TODO:                                                                     #
-    # Implement a vectorized version of the gradient for the softmax            #
-    # loss, storing the result in dW.                                           #
-    #                                                                           #
-    # Hint: Instead of computing the gradient from scratch, it may be easier    #
-    # to reuse some of the intermediate values that you used to compute the     #
-    # loss.                                                                     #
-    #############################################################################
-
+    # 梯度：dW = X^T (P - Y_onehot) / N + 2λW
+    onehot = np.eye(num_classes)[y]          # (N, C)，正确类别处为 1
+    dW = X.T.dot(p - onehot) / num_train + 2 * reg * W
 
     return loss, dW
