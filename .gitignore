@@ -24,3 +24,7 @@ a3_code_submission.zip
 a1_inline_submission.pdf
 a2_inline_submission.pdf
 a3_inline_submission.pdf
+
+# 本机缓存与机器相关配置（不入库）
+.cache/
+.vscode/
