@@ -101,6 +101,7 @@ class LinearClassifier(object):
         - y_pred: Predicted labels for the data in X. y_pred is a 1-dimensional
           array of length N, and each element is an integer giving the predicted
           class.
+        pretdict 函数的一般思路是：对每个样本，计算它在所有类别上的得分，然后选择得分最高的类别
         """
         y_pred = np.zeros(X.shape[0])
         ###########################################################################
