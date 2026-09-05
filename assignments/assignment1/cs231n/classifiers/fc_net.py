@@ -56,7 +56,12 @@ class TwoLayerNet(object):
         ############################################################################
 
         ############################################################################
-        #                             END OF YOUR CODE                             #
+        self.params["W1"] = weight_scale * np.random.randn(input_dim, hidden_dim)
+        self.params["b1"] = np.zeros(hidden_dim)
+        self.params["W2"] = weight_scale * np.random.randn(hidden_dim, num_classes)
+        self.params["b2"] = np.zeros(num_classes)
+
+#                             END OF YOUR CODE                             #
         ############################################################################
 
     def loss(self, X, y=None):
@@ -85,7 +90,14 @@ class TwoLayerNet(object):
         ############################################################################
 
         ############################################################################
-        #                             END OF YOUR CODE                             #
+        N = X.shape[0]
+        X = X.reshape(N, -1)   # 把 (N, 32, 32, 3) 展平成 (N, D)
+        # 第一层：affine + relu
+        h1, cache1 = affine_relu_forward(X, self.params["W1"], self.params["b1"])
+        # 第二层：affine，得到 C 个类别的分数
+        scores, cache2 = affine_forward(h1, self.params["W2"], self.params["b2"])
+
+#                             END OF YOUR CODE                             #
         ############################################################################
 
         # If y is None then we are in test mode so just return scores
@@ -105,7 +117,18 @@ class TwoLayerNet(object):
         ############################################################################
 
         ############################################################################
-        #                             END OF YOUR CODE                             #
+        # 数据损失 + 对分数的梯度（softmax）
+        loss, dscores = softmax_loss(scores, y)
+        # 第二层反向：得 dh1（继续回传）与 W2/b2 的梯度
+        dh1, grads["W2"], grads["b2"] = affine_backward(dscores, cache2)
+        # 第一层反向（affine+relu）：得 W1/b1 的梯度（dx 不需要）
+        _, grads["W1"], grads["b1"] = affine_relu_backward(dh1, cache1)
+        # L2 正则（约定带 0.5 系数）：loss += 0.5*reg*ΣW²，梯度 += reg*W
+        loss += 0.5 * self.reg * (np.sum(self.params["W1"] ** 2) + np.sum(self.params["W2"] ** 2))
+        grads["W1"] += self.reg * self.params["W1"]
+        grads["W2"] += self.reg * self.params["W2"]
+
+#                             END OF YOUR CODE                             #
         ############################################################################
 
         return loss, grads
@@ -199,7 +222,13 @@ class FullyConnectedNet(object):
         ############################################################################
 
         ############################################################################
-        #                             END OF YOUR CODE                             #
+        dims = [input_dim] + list(hidden_dims) + [num_classes]
+        for l in range(1, self.num_layers + 1):
+            # 权重：高斯 × weight_scale；偏置：全零
+            self.params["W%d" % l] = weight_scale * np.random.randn(dims[l - 1], dims[l])
+            self.params["b%d" % l] = np.zeros(dims[l])
+
+#                             END OF YOUR CODE                             #
         ############################################################################
 
         # When using dropout we need to pass a dropout_param dictionary to each
@@ -269,7 +298,18 @@ class FullyConnectedNet(object):
         ############################################################################
 
         ############################################################################
-        #                             END OF YOUR CODE                             #
+        out = X
+        caches = []
+        # 前 L-1 层：affine + relu（隐藏层）
+        for l in range(1, self.num_layers):
+            out, cache = affine_relu_forward(out, self.params["W%d" % l], self.params["b%d" % l])
+            caches.append(cache)
+        # 最后一层：只有 affine，输出 C 类分数
+        scores, cache_last = affine_forward(
+            out, self.params["W%d" % self.num_layers], self.params["b%d" % self.num_layers]
+        )
+
+#                             END OF YOUR CODE                             #
         ############################################################################
 
         # If test mode return early.
@@ -292,7 +332,20 @@ class FullyConnectedNet(object):
         ############################################################################
 
         ############################################################################
-        #                             END OF YOUR CODE                             #
+        # softmax：数据损失 + 对分数的梯度
+        loss, dscores = softmax_loss(scores, y)
+        # 最后一层反向
+        dout, grads["W%d" % self.num_layers], grads["b%d" % self.num_layers] = affine_backward(dscores, cache_last)
+        # 隐藏层从后往前反向（顺序与前向相反）
+        for l in range(self.num_layers - 1, 0, -1):
+            dout, grads["W%d" % l], grads["b%d" % l] = affine_relu_backward(dout, caches[l - 1])
+        # L2 正则（0.5 系数约定）：只作用于权重，不作用于偏置
+        for l in range(1, self.num_layers + 1):
+            W = self.params["W%d" % l]
+            loss += 0.5 * self.reg * np.sum(W * W)
+            grads["W%d" % l] += self.reg * W
+
+#                             END OF YOUR CODE                             #
         ############################################################################
 
         return loss, grads

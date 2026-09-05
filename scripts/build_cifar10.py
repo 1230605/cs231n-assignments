@@ -23,7 +23,7 @@ def load_images(parquet_path):
     data = np.empty((len(imgs), 32 * 32 * 3), dtype=np.uint8)
     for i, item in enumerate(imgs):
         img = Image.open(io.BytesIO(item["bytes"]))
-        data[i] = np.asarray(img, dtype=np.uint8).reshape(-1)
+        data[i] = np.asarray(img, dtype=np.uint8).transpose(2, 0, 1).reshape(-1)  # PIL=HWC 交错，官方格式=CHW 平面
     return data, labels
 
 

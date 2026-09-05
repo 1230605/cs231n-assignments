@@ -736,7 +736,20 @@ def softmax_loss(x, y):
     ###########################################################################
     # TODO: Copy over your solution from A1.
     ###########################################################################
+    num_train = x.shape[0]
+    # 数值稳定：每行减去该行最大值，防止 exp 溢出
+    shifted = x - np.max(x, axis=1, keepdims=True)
+    # log-softmax：log p_j = s_j - log(sum(exp(s)))，数值更稳
+    log_probs = shifted - np.log(np.sum(np.exp(shifted), axis=1, keepdims=True))
+    probs = np.exp(log_probs)
 
+    # 交叉熵损失：取每个样本正确类别的负对数概率，求平均
+    loss = -np.sum(log_probs[np.arange(num_train), y]) / num_train
+
+    # 梯度：dx = (p - onehot(y)) / N
+    dx = probs.copy()
+    dx[np.arange(num_train), y] -= 1
+    dx /= num_train
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################

@@ -69,7 +69,12 @@ def sgd_momentum(w, dw, config=None):
     ###########################################################################
 
     ###########################################################################
-    #                             END OF YOUR CODE                            #
+    v = config.get("velocity", np.zeros_like(w))
+    # 速度：动量项衰减旧速度，再叠加上当前负梯度（lr 控制步长）
+    v = config["momentum"] * v - config["learning_rate"] * dw
+    next_w = w + v
+
+#                             END OF YOUR CODE                            #
     ###########################################################################
     config["velocity"] = v
 
@@ -103,7 +108,12 @@ def rmsprop(w, dw, config=None):
     ###########################################################################
 
     ###########################################################################
-    #                             END OF YOUR CODE                            #
+    # cache：梯度平方的滑动平均（二阶矩估计）
+    config["cache"] = config["decay_rate"] * config["cache"] + (1 - config["decay_rate"]) * dw ** 2
+    # 用 sqrt(cache) 逐参数归一化学习率：梯度大的维度步子小，梯度小的维度步子大
+    next_w = w - config["learning_rate"] * dw / (np.sqrt(config["cache"]) + config["epsilon"])
+
+#                             END OF YOUR CODE                            #
     ###########################################################################
 
     return next_w, config
@@ -144,7 +154,17 @@ def adam(w, dw, config=None):
     ###########################################################################
 
     ###########################################################################
-    #                             END OF YOUR CODE                            #
+    config["t"] += 1
+    t = config["t"]
+    # 一阶矩（动量）与二阶矩（梯度平方 EMA）
+    config["m"] = config["beta1"] * config["m"] + (1 - config["beta1"]) * dw
+    config["v"] = config["beta2"] * config["v"] + (1 - config["beta2"]) * dw ** 2
+    # 偏差修正：前几步 EMA 从 0 起步偏小，除以 (1 - beta^t) 修正
+    mb = config["m"] / (1 - config["beta1"] ** t)
+    vb = config["v"] / (1 - config["beta2"] ** t)
+    next_w = w - config["learning_rate"] * mb / (np.sqrt(vb) + config["epsilon"])
+
+#                             END OF YOUR CODE                            #
     ###########################################################################
 
     return next_w, config
