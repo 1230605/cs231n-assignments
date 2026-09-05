@@ -5,7 +5,22 @@ try:
     from .im2col_cython import col2im_cython, im2col_cython
     from .im2col_cython import col2im_6d_cython
 except ImportError:
-    pass
+    # pure-python fallbacks (no compiled Cython extension available)
+    def col2im_6d_cython(dx_cols, N, C, H, W, HH, WW, pad, stride):
+        out_h = dx_cols.shape[-2]
+        out_w = dx_cols.shape[-1]
+        x_pad = np.zeros((N, C, H + 2 * pad, W + 2 * pad), dtype=dx_cols.dtype)
+        for c in range(C):
+            for hh in range(HH):
+                for ww in range(WW):
+                    x_pad[:, c, hh:hh + stride * out_h:stride, ww:ww + stride * out_w:stride] += dx_cols[c, hh, ww]
+        return x_pad[:, :, pad:pad + H, pad:pad + W]
+    def col2im_cython(dx_cols, N, C, H, W, HH, WW, pad, stride):
+        from .im2col import col2im_indices
+        return col2im_indices(dx_cols, (N, C, H, W), HH, WW, pad, stride)
+    def im2col_cython(x, HH, WW, pad, stride):
+        from .im2col import im2col_indices
+        return im2col_indices(x, HH, WW, pad, stride)
     # print("""=========== You can safely ignore the message below if you are NOT working on ConvolutionalNetworks.ipynb ===========""")
     # print("\tYou will need to compile a Cython extension for a portion of this assignment.")
     # print("\tThe instructions to do this will be given in a section of the notebook below.")
