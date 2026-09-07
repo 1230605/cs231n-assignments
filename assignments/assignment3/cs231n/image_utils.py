@@ -54,20 +54,33 @@ def deprocess_image(img, rescale=False):
 def image_from_url(url):
     """
     Read an image from a URL. Returns a numpy array with the pixel data.
-    We write the image to a temporary file then read it back. Kinda gross.
+    The bytes are read into memory so the temporary file can be removed even
+    on Windows, where an open file handle would otherwise block deletion.
     """
+    import io, time
+
     try:
-        f = urllib.request.urlopen(url)
+        with urllib.request.urlopen(url) as f:
+            data = f.read()
         _, fname = tempfile.mkstemp()
-        with open(fname, "wb") as ff:
-            ff.write(f.read())
-        img = imread(fname)
-        os.remove(fname)
+        try:
+            with open(fname, "wb") as ff:
+                ff.write(data)
+            with open(fname, "rb") as fh:
+                img = np.array(Image.open(io.BytesIO(fh.read())))
+        finally:
+            for _ in range(20):
+                try:
+                    os.remove(fname)
+                    break
+                except PermissionError:
+                    time.sleep(0.05)
         return img
     except urllib.error.URLError as e:
         print("URL Error: ", e.reason, url)
     except urllib.error.HTTPError as e:
         print("HTTP Error: ", e.code, url)
+
 
 
 def load_image(filename, size=None):
