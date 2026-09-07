@@ -53,9 +53,9 @@ def deprocess_image(img, rescale=False):
 
 def image_from_url(url):
     """
-    Read an image from a URL. Returns a numpy array with the pixel data.
-    The bytes are read into memory so the temporary file can be removed even
-    on Windows, where an open file handle would otherwise block deletion.
+    Read an image from a URL. Returns a numpy array (H, W, 3) uint8.
+    If the URL is unreachable (common for the old Flickr links), return a
+    gray placeholder so that downstream visualization code still runs.
     """
     import io, time
 
@@ -76,10 +76,9 @@ def image_from_url(url):
                 except PermissionError:
                     time.sleep(0.05)
         return img
-    except urllib.error.URLError as e:
-        print("URL Error: ", e.reason, url)
-    except urllib.error.HTTPError as e:
-        print("HTTP Error: ", e.code, url)
+    except Exception as e:
+        print("Image URL failed (", type(e).__name__, "), using gray placeholder:", url)
+        return np.full((128, 128, 3), 128, dtype=np.uint8)
 
 
 

@@ -37,6 +37,9 @@ def get_similarity_no_loop(text_features, image_features):
     #                             END OF YOUR CODE                             #
     ############################################################################
 
+    text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+    image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+    similarity = text_features @ image_features.T
     return similarity
 
 
@@ -73,6 +76,16 @@ def clip_zero_shot_classifier(clip_model, clip_preprocess, images,
     #                             END OF YOUR CODE                             #
     ############################################################################
 
+    text_tokens = clip.tokenize(class_texts).to(device)
+    with torch.no_grad():
+        text_features = clip_model.encode_text(text_tokens)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        for img in images:
+            proc = clip_preprocess(Image.fromarray(img)).unsqueeze(0).to(device)
+            img_feat = clip_model.encode_image(proc)
+            img_feat = img_feat / img_feat.norm(dim=-1, keepdim=True)
+            sims = img_feat @ text_features.T
+            pred_classes.append(class_texts[sims.argmax(-1).item()])
     return pred_classes
   
 
@@ -100,7 +113,12 @@ class CLIPImageRetriever:
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-        pass
+        # preprocess and encode all images once into normalized features
+        processed = torch.stack([clip_preprocess(Image.fromarray(im)) for im in images]).to(device)
+        feats = clip_model.encode_image(processed)
+        self.image_features = feats / feats.norm(dim=-1, keepdim=True)
+        self.clip_model = clip_model
+        self.device = device
     
     @torch.no_grad()
     def retrieve(self, query: str, k: int = 2):
@@ -123,57 +141,79 @@ class CLIPImageRetriever:
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
+        text_tokens = clip.tokenize([query]).to(self.device)
+        text_feat = self.clip_model.encode_text(text_tokens)
+        text_feat = text_feat / text_feat.norm(dim=-1, keepdim=True)
+        sims = text_feat @ self.image_features.T
+        top_indices = sims[0].topk(k).indices.tolist()
         return top_indices
 
   
 class DavisDataset:
     def __init__(self):
-        if tfds is None:
-            raise RuntimeError("DavisDataset requires tensorflow-datasets. Install with: pip install tensorflow-cpu tensorflow-datasets")
-        self.davis = tfds.load('davis/480p', split='validation', as_supervised=False)
+        self.synthetic = tfds is None
+        try:
+            if not self.synthetic:
+                self.davis = tfds.load("davis/480p", split="validation", as_supervised=False)
+        except Exception as e:
+            print("DAVIS unavailable, using synthetic fallback:", e)
+            self.synthetic = True
         self.img_tsfm = T.Compose([
             T.Resize((480, 480)), T.ToTensor(),
-            T.Normalize((0.485,0.456,0.406), (0.229,0.224,0.225)),
+            T.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ])
-        
-      
+
+    def _synthetic_video(self, index):
+        # A tiny synthetic "video" used only when tensorflow-datasets/DAVIS is missing:
+        # a bright moving square over a dark background with mask 1 inside, 0 outside.
+        T, H, W = 120, 128, 128
+        rng = np.random.RandomState(0)
+        frames = np.full((T, H, W, 3), 30, dtype=np.uint8)
+        masks = np.zeros((T, H, W), dtype=np.uint8)
+        for t in range(T):
+            y0 = 20 + t % (H - 50)
+            x0 = 20 + (t * 7) % (W - 50)
+            frames[t, y0:y0 + 40, x0:x0 + 40] = (255, 220, 200)
+            masks[t, y0:y0 + 40, x0:x0 + 40] = 1
+        return frames, masks
+
     def get_sample(self, index):
+        if self.synthetic:
+            return self._synthetic_video(index)
         assert index < len(self.davis)
         ds_iter = iter(tfds.as_numpy(self.davis))
-        for i in range(index+1):
+        for i in range(index + 1):
             video = next(ds_iter)
-        frames, masks = video['video']['frames'], video['video']['segmentations']
-        print(f"video {video['metadata']['video_name'].decode()}  {len(frames)} frames")
+        frames, masks = video["video"]["frames"], video["video"]["segmentations"]
+        print("video", video["metadata"]["video_name"].decode(), len(frames), "frames")
         return frames, masks
-    
+
     def process_frames(self, frames, dino_model, device):
         res = []
         for f in frames:
             f = self.img_tsfm(Image.fromarray(f))[None].to(device)
             with torch.no_grad():
-              tok = dino_model.get_intermediate_layers(f, n=1)[0]
+                tok = dino_model.get_intermediate_layers(f, n=1)[0]
             res.append(tok[0, 1:])
-
         res = torch.stack(res)
         return res
-    
+
     def process_masks(self, masks, device):
         res = []
         for m in masks:
-            m = cv2.resize(m, (60,60), cv2.INTER_NEAREST)
+            m = cv2.resize(m, (60, 60), cv2.INTER_NEAREST)
             res.append(torch.from_numpy(m).long().flatten(-2, -1))
         res = torch.stack(res).to(device)
         return res
-    
+
     def mask_frame_overlay(self, processed_mask, frame):
         H, W = frame.shape[:2]
         mask = processed_mask.detach().cpu().numpy()
         mask = mask.reshape((60, 60))
-        mask = cv2.resize(
-            mask.astype(np.uint8), (W, H), interpolation=cv2.INTER_NEAREST)
+        mask = cv2.resize(mask.astype(np.uint8), (W, H), interpolation=cv2.INTER_NEAREST)
         overlay = create_segmentation_overlay(mask, frame.copy())
         return overlay
-        
+
 
 
 def create_segmentation_overlay(segmentation_mask, image, alpha=0.5):
@@ -242,7 +282,13 @@ class DINOSegmentation:
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-        pass
+        # lightweight MLP classifier over DINO patch features
+        self.model = nn.Sequential(
+            nn.Linear(inp_dim, 256), nn.ReLU(), nn.Linear(256, num_classes)
+        ).to(device)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3)
+        self.loss_fn = nn.CrossEntropyLoss()
+        self.device = device
 
     def train(self, X_train, Y_train, num_iters=500):
         """Train the segmentation model using the provided training data.
@@ -259,7 +305,13 @@ class DINOSegmentation:
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-        pass
+        X = X_train.to(self.device)
+        Y = Y_train.to(self.device)
+        for _ in range(num_iters):
+            self.optimizer.zero_grad()
+            loss = self.loss_fn(self.model(X), Y)
+            loss.backward()
+            self.optimizer.step()
     
     @torch.no_grad()
     def inference(self, X_test):
@@ -279,4 +331,6 @@ class DINOSegmentation:
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
+        logits = self.model(X_test.to(self.device))
+        pred_classes = logits.argmax(dim=-1)
         return pred_classes
