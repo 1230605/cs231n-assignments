@@ -55,15 +55,10 @@ class CIFAR10Pair(CIFAR10):
         x_j = None
 
         if self.transform is not None:
-            ##############################################################################
-            # TODO: Start of your code.                                                  #
-            #                                                                            #
-            # Apply self.transform to the image to produce x_i and x_j in the paper #
-            ##############################################################################
-            pass
-            ##############################################################################
-            #                               END OF YOUR CODE                             #
-            ##############################################################################
+            # apply the (random) transform twice for two augmented views
+            x_i = self.transform(img)
+            x_j = self.transform(img)
+
 
         if self.target_transform is not None:
             target = self.target_transform(target)

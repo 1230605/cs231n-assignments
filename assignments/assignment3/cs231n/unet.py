@@ -170,18 +170,13 @@ class Unet(nn.Module):
         # Downsampling blocks
         ####################################################################
         for ind, (dim_in, dim_out) in enumerate(in_out):
-            down_block = None
-            ##################################################################
-            # TODO: Create one UNet downsampling layer `down_block` as a ModuleList.
-            # It should be a ModuleList of 3 blocks [ResnetBlock, ResnetBlock, Downsample].
-            # Each ResnetBlock operates on dim_in channels and outputs dim_in channels.
-            # Make sure to pass the context_dim to each ResnetBlock.
-            # The Downsample block operates on dim_in channels and outputs dim_out channels.
-            # Make sure to exactly follow this structure of ModuleList in order to
-            # load a pretrained checkpoint.
-            ##################################################################
-
-            ##################################################################
+            down_block = nn.ModuleList(
+                [
+                    ResnetBlock(dim_in, dim_in, context_dim=context_dim),
+                    ResnetBlock(dim_in, dim_in, context_dim=context_dim),
+                    Downsample(dim_in, dim_out),
+                ]
+            )
             self.downs.append(down_block)
 
         # Middle blocks
@@ -196,15 +191,13 @@ class Unet(nn.Module):
         # self.ups will also be a ModuleList of ModuleLists.
         # Each BlockList will contain 3 blocks [Upsample, ResnetBlock, ResnetBlock].
         for ind, (dim_in, dim_out) in enumerate(in_out_ups):
-            up_block = None
-            ##################################################################
-            # TODO: Create one UNet upsampling layer as a ModuleList.
-            # It should be a ModuleList of 3 blocks [Upsample, ResnetBlock, ResnetBlock].
-            # This will mirror the corresponding downsampling block.
-            # Don't forget to account for the skip connections by having 2 x dim_out
-            # channels at the input of both ResnetBlocks.
-            ##################################################################
-
+            up_block = nn.ModuleList(
+                [
+                    Upsample(dim_in, dim_out),
+                    ResnetBlock(dim_out * 2, dim_out, context_dim=context_dim),
+                    ResnetBlock(dim_out * 2, dim_out, context_dim=context_dim),
+                ]
+            )
             self.ups.append(up_block)
             ##################################################################
 
@@ -219,16 +212,11 @@ class Unet(nn.Module):
         model_kwargs = copy.deepcopy(model_kwargs)
 
         ##################################################################
-        # TODO: Apply classifier-free guidance using Eq. (6) from
-        # https://arxiv.org/pdf/2207.12598 i.e.
-        # x = (scale + 1) * eps(x_t, cond) - scale * eps(x_t, empty)
-        #
-        # You will have to call self.forward two times.
-        # For unconditional sampling, pass None in`text_emb`.
-        ##################################################################
-
-        ##################################################################
-
+        cond_out = self.forward(x, time, model_kwargs)
+        empty = dict(model_kwargs)
+        empty["text_emb"] = None
+        uncond_out = self.forward(x, time, empty)
+        x = (cfg_scale + 1) * cond_out - cfg_scale * uncond_out
         return x
 
     def forward(self, x, time, model_kwargs={}):
@@ -264,26 +252,23 @@ class Unet(nn.Module):
         x = self.init_conv(x)
 
         ##################################################################
-        # TODO: Process `x` through the U-Net conditioned on the context.
-        #
-        # 1. Downsampling:
-        #    - Process `x` through each downsampling block with context.
-        #    - After each ResNet block, save the output (feature maps) in a list or dict
-        #      for use as skip connections in the upsampling path.
-        #    - Make sure to pass the context to each ResNet block.
-        #
-        # 2. Middle:
-        #    - Process `x` through the middle blocks with context.
-        #
-        # 3. Upsampling:
-        #    - Process `x` through each upsampling block with context.
-        #    - Before each ResNet block, concatenate the input with the corresponding
-        #      skip connection from the downsampling path.
-        #    - Make sure to pass the context to each ResNet block.
-        ##################################################################
-
-        ##################################################################
-
+        skips = []
+        for down in self.downs:
+            # two ResNetBlocks per stage; save each output as a skip connection
+            x = down[0](x, context)
+            skips.append(x)
+            x = down[1](x, context)
+            skips.append(x)
+            x = down[2](x)
+        # Middle blocks
+        x = self.mid_block1(x, context)
+        x = self.mid_block2(x, context)
+        # Upsampling: upsample, then concat one skip before each ResNetBlock
+        for up in self.ups:
+            x = up[0](x)
+            for res in up[1:]:
+                skip = skips.pop()
+                x = res(torch.cat([x, skip], dim=1), context)
         # Final block
         x = self.final_conv(x)
 

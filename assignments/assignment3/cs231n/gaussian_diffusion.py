@@ -104,6 +104,9 @@ class GaussianDiffusion(nn.Module):
         ####################################################################
 
         ####################################################################
+        x_start = (x_t - extract(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape) * noise) / extract(
+            self.sqrt_alphas_cumprod, t, x_t.shape
+        )
         return x_start
 
     def predict_noise_from_start(self, x_t, t, x_start):
@@ -123,6 +126,9 @@ class GaussianDiffusion(nn.Module):
         ####################################################################
 
         ####################################################################
+        pred_noise = (x_t - extract(self.sqrt_alphas_cumprod, t, x_t.shape) * x_start) / extract(
+            self.sqrt_one_minus_alphas_cumprod, t, x_t.shape
+        )
         return pred_noise
 
     def q_posterior(self, x_start, x_t, t):
@@ -175,6 +181,17 @@ class GaussianDiffusion(nn.Module):
         
         ##################################################################
 
+        model_out = self.model(x_t, t, model_kwargs)
+        if self.objective == 'pred_noise':
+            x_start = self.predict_start_from_noise(x_t, t, model_out)
+        else:
+            x_start = model_out
+        x_start = x_start.clamp(-1.0, 1.0)
+        posterior_mean, posterior_std = self.q_posterior(x_start, x_t, t)
+        noise = torch.randn_like(x_t)
+        x_tm1 = posterior_mean + torch.where(
+            t[:, None, None, None] > 0, posterior_std * noise, torch.zeros_like(x_t)
+        )
         return x_tm1
 
     @torch.no_grad()
@@ -219,6 +236,10 @@ class GaussianDiffusion(nn.Module):
         ####################################################################
 
         ####################################################################
+        x_t = (
+            extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
+            + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
+        )
         return x_t
 
     def p_losses(self, x_start, model_kwargs={}):
@@ -241,6 +262,9 @@ class GaussianDiffusion(nn.Module):
 
         ####################################################################
 
+        x_t = self.q_sample(x_start, t, noise)
+        pred = self.model(x_t, t, model_kwargs)
+        loss = (extract(self.loss_weight, t, target.shape) * (pred - target) ** 2).mean()
         return loss
 
 
