@@ -75,23 +75,16 @@ class CaptioningTransformer(nn.Module):
         """
         N, T = captions.shape
         # Create a placeholder, to be overwritten by your code below.
-        scores = torch.empty((N, T, self.vocab_size))
-        ############################################################################
-        # TODO: Implement the forward function for CaptionTransformer.             #
-        # A few hints:                                                             #
-        #  1) You first have to embed your caption and add positional              #
-        #     encoding. You then have to project the image features into the same  #
-        #     dimensions.                                                          #
-        #  2) You have to prepare a mask (tgt_mask) for masking out the future     #
-        #     timesteps in captions. torch.tril() function might help in preparing #
-        #     this mask.                                                           #
-        #  3) Finally, apply the decoder features on the text & image embeddings   #
-        #     along with the tgt_mask. Project the output to scores per token      #
-        ############################################################################
-
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        # 1) embed the caption words and add positional encodings
+        tgt = self.embedding(captions)                    # (N, T, W)
+        tgt = self.positional_encoding(tgt)
+        # 2) project image features to the same dimension and use as memory (S=1)
+        memory = self.visual_projection(features).unsqueeze(1)   # (N, 1, W)
+        # 3) causal mask: position i may attend to j <= i only
+        tgt_mask = torch.tril(torch.ones(T, T, dtype=torch.bool, device=captions.device))
+        # 4) run the transformer decoder, then project to vocabulary scores
+        dec_out = self.transformer(tgt, memory, tgt_mask=tgt_mask)   # (N, T, W)
+        scores = self.output(dec_out)                     # (N, T, V)
 
         return scores
 
@@ -229,21 +222,16 @@ class VisionTransformer(nn.Module):
          - logits: Output classification logits of shape (N, num_classes)
         """
         N = x.size(0)
-        logits = torch.zeros(N, self.num_classes, device=x.device)
-        
-        ############################################################################
-        # TODO: Implement the forward pass of the Vision Transformer.             #
-        # 1. Convert the input image into a sequence of patch vectors.            #
-        # 2. Add positional encodings to retain spatial information.              #
-        # 3. Pass the sequence through the Transformer encoder.                   #
-        # 4. Average pool patch vectors to get a feature vector for each image.   #
-        #    You may find torch.mean useful.                                      #
-        # 5. Feed it through a linear layer to produce class logits.              #
-        ############################################################################
-
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
+        # 1) image -> sequence of patch embeddings: (N, num_patches, E)
+        seq = self.patch_embed(x)
+        # 2) add positional encodings (includes dropout)
+        seq = self.positional_encoding(seq)
+        # 3) transformer encoder (no mask needed)
+        seq = self.transformer(seq)
+        # 4) average pooling over patches
+        pooled = seq.mean(dim=1)          # (N, E)
+        # 5) classification head
+        logits = self.head(pooled)        # (N, num_classes)
 
 
         return logits
