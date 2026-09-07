@@ -33,17 +33,63 @@ Stanford CS231n 2026 三个编程作业的**完整实现与实验记录**（Assi
 
 ```
 .
-├── assignments/
-│   ├── assignment1/   # kNN / Softmax / FC Nets / Features
-│   ├── assignment2/   # BatchNorm / Dropout / ConvNet / PyTorch / RNN
-│   └── assignment3/   # Transformer / SimCLR / DDPM / CLIP·DINO
-├── scripts/           # 环境与数据准备脚本
-├── .envs/cs231n/      # conda 环境（不入库）
-├── data/              # 数据集缓存（不入库）
-└── README.md
+├── README.md · requirements.txt
+├── scripts/                        # 环境/数据准备脚本
+│   ├── build_cifar10.py · set_kernelspec.py
+│   └── localize_notebooks.py · fix_colab_paths.py
+├── .envs/cs231n/                   # conda 环境（不入库）
+├── data/                           # 数据集缓存（不入库）
+│
+└── assignments/
+    ├── assignment1/                # 图像分类：kNN → Softmax → FC Nets → Features
+    │   ├── knn.ipynb · softmax.ipynb
+    │   ├── two_layer_net.ipynb · features.ipynb · FullyConnectedNets.ipynb
+    │   └── cs231n/
+    │       ├── classifiers/
+    │       │   ├── k_nearest_neighbor.py      # 距离矩阵三种实现 + 投票
+    │       │   ├── linear_classifier.py       # SGD 训练循环 + predict
+    │       │   ├── softmax.py                 # naive / vectorized 损失与梯度
+    │       │   └── fc_net.py                  # TwoLayerNet + FullyConnectedNet
+    │       ├── layers.py · layer_utils.py     # affine/ReLU/softmax 等基础层
+    │       ├── optim.py · solver.py           # SGD→Adam；Solver 训练器
+    │       ├── features.py                    # HOG + HSV 直方图
+    │       ├── data_utils.py · gradient_check.py · vis_utils.py
+    │       └── datasets/ (本地数据，不入库)
+    │
+    ├── assignment2/                # 卷积网络：手写层 → PyTorch → RNN
+    │   ├── BatchNormalization.ipynb · Dropout.ipynb
+    │   ├── ConvolutionalNetworks.ipynb · PyTorch.ipynb
+    │   ├── RNN_Captioning_pytorch.ipynb
+    │   └── cs231n/
+    │       ├── layers.py           # BN/LN/Dropout/Conv/Pool/Spatial-BN/GroupNorm
+    │       ├── layer_utils.py · fast_layers.py · im2col.py
+    │       ├── optim.py · solver.py
+    │       ├── classifiers/
+    │       │   ├── fc_net.py       # FullyConnectedNet（支持 norm/dropout）
+    │       │   ├── cnn.py          # ThreeLayerConvNet
+    │       │   └── rnn_pytorch.py  # CaptioningRNN
+    │       ├── rnn_layers_pytorch.py
+    │       ├── captioning_solver_pytorch.py · coco_utils.py
+    │       └── datasets/ (本地数据，不入库)
+    │
+    └── assignment3/                # 现代模型：Transformer / 自监督 / 扩散 / 多模态
+        ├── Transformer_Captioning.ipynb
+        ├── Self_Supervised_Learning.ipynb
+        ├── DDPM.ipynb · CLIP_DINO.ipynb
+        └── cs231n/
+            ├── transformer_layers.py            # 多头注意力/位置编码/编码解码层
+            ├── classifiers/transformer.py       # CaptioningTransformer + ViT
+            ├── simclr/
+            │   ├── contrastive_loss.py          # InfoNCE naive/vectorized
+            │   ├── data_utils.py · model.py · utils.py
+            ├── gaussian_diffusion.py · unet.py · ddpm_trainer.py
+            ├── clip_dino.py                     # CLIP 工具 + DINO 分割
+            ├── coco_utils.py · captioning_solver_transformer.py
+            ├── emoji_dataset.py · image_utils.py
+            └── datasets/ (本地数据/权重，不入库)
 ```
 
-每个 assignment 自带完整的 `cs231n/` 课程代码包；学生需要实现的函数均以 `TODO` 标注并已填写完成。`collect_submission.ipynb` 用于生成 Gradescope 提交包。
+**Notebook ↔ 源码对照**：每个 notebook 的说明文字都会指明它调用哪个文件；需要实现的函数在源码中以 `TODO` 标注，本仓库已全部完成。`collect_submission.ipynb`（各 assignment 内）用于打包 Gradescope 提交物。
 
 ---
 
