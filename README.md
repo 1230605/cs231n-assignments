@@ -1,6 +1,6 @@
 # CS231n Assignments (2026) · Deep Learning for Computer Vision
 
-Stanford CS231n 2026 三个编程作业的**完整实现与实验记录**（Assignment 1–3），覆盖从"手写 numpy 神经网络"到"Transformer / 对比学习 / 扩散模型 / CLIP 等现代深度学习范式"的完整链路。
+Stanford CS231n 2026 三个编程项目的**完整实现与实验记录**（Assignment 1–3）
 
 > Completed implementation & experiments for Stanford CS231n (2026) assignments. All code is written to be runnable locally; notebooks are localized (Colab Drive cells replaced with local setup) and ship with executed outputs.
 
@@ -13,10 +13,10 @@ Stanford CS231n 2026 三个编程作业的**完整实现与实验记录**（Assi
 | | 主题 | 覆盖内容 |
 |---|---|---|
 | **Assignment 1** | 图像分类与全连接网络 | kNN、Softmax/SVM、Two-Layer Net、Image Features、任意深度 FC Nets 与多种优化器 |
-| **Assignment 2** | 卷积网络与 PyTorch | BatchNorm / LayerNorm / Dropout / ConvNet（手写）、PyTorch 三层抽象（裸张量 → nn.Module → nn.Sequential）、Part V 开放挑战 |
+| **Assignment 2** | 卷积网络与 PyTorch | BatchNorm / LayerNorm / Dropout / ConvNet层手写实现、PyTorch 三层抽象实现CNN（裸张量 → nn.Module → nn.Sequential）、开放实现更好性能 |
 | **Assignment 3** | 现代生成与多模态模型 | Transformer 图像描述与 ViT、SimCLR 自监督、DDPM 扩散生成、CLIP 零样本/检索与 DINO 分割 |
 
-主要亮点结果：
+完成结果
 
 | 任务 | 结果 |
 |---|---|
@@ -37,8 +37,8 @@ Stanford CS231n 2026 三个编程作业的**完整实现与实验记录**（Assi
 ├── scripts/                        # 环境/数据准备脚本
 │   ├── build_cifar10.py · set_kernelspec.py
 │   └── localize_notebooks.py · fix_colab_paths.py
-├── .envs/cs231n/                   # conda 环境（不入库）
-├── data/                           # 数据集缓存（不入库）
+├── .envs/cs231n/                   # conda 环境（不在库中）
+├── data/                           # 数据集缓存（不在库中）
 │
 └── assignments/
     ├── assignment1/                # 图像分类：kNN → Softmax → FC Nets → Features
@@ -72,7 +72,7 @@ Stanford CS231n 2026 三个编程作业的**完整实现与实验记录**（Assi
     │       ├── captioning_solver_pytorch.py · coco_utils.py
     │       └── datasets/ (本地数据，不入库)
     │
-    └── assignment3/                # 现代模型：Transformer / 自监督 / 扩散 / 多模态
+    └── assignment3/                #  Transformer / 自监督 / Diffusion / 多模态
         ├── Transformer_Captioning.ipynb
         ├── Self_Supervised_Learning.ipynb
         ├── DDPM.ipynb · CLIP_DINO.ipynb
@@ -108,7 +108,7 @@ Stanford CS231n 2026 三个编程作业的**完整实现与实验记录**（Assi
 
 ## Highlights · 学习要点（按 Assignment）
 
-### Assignment 1 —— 亲手写出深度学习的每一行
+### Assignment 1 —— 用numpy实现深度学习
 - kNN：三种距离实现体会向量化（13.9s → 31.5s → 0.09s 的实测对比）；
 - Softmax：解析梯度推导 `p − onehot` 与数值梯度互验；
 - Two-Layer / FC Nets：模块化 `forward/backward + cache`、链式法则、L2 正则（0.5 约定）、SGD → Momentum → RMSProp → Adam；
@@ -124,28 +124,6 @@ Stanford CS231n 2026 三个编程作业的**完整实现与实验记录**（Assi
 - SimCLR：InfoNCE 对比损失与自监督表征，线性评估 81%；
 - DDPM：加噪/去噪、UNet、Classifier-Free Guidance；
 - CLIP：图文共享空间中的相似度、零样本分类与图像检索；DINO patch 特征的可视化与分割。
-
----
-
-## Reflections · 心得体会
-
-### 1. 亲手实现，才能真正读懂框架
-在 Assignment 1–2 中手写了反向传播、卷积、归一化与 dropout 之后，PyTorch 里的 `loss.backward()`、`nn.Conv2d` 与 `nn.BatchNorm2d` 不再是黑盒——你能在脑海里看见它们在做什么，出问题时也知道去哪找。
-
-### 2. 抽象层次决定了"便利"与"灵活"的取舍
-Barebones → `nn.Module` → `nn.Sequential` 的递进让我理解了框架的边界：它替你管理参数、自动求导与训练循环，但复杂拓扑（分支、共享层）仍需要自定义 `forward`。学会在正确的层次工作，比死记 API 更重要。
-
-### 3. 小改进会叠加成质的飞跃
-同样的网络，仅在"加深 + BatchNorm + 更优优化器 + 数据增强"上做增量改进，CIFAR-10 就从 46% 涨到 83%+。调参最重要的纪律是：**一次只改一个变量，盯验证曲线而非只看最终数字**。
-
-### 4. 工程纪律与泛化思维
-- 验证集用于反复调参，测试集只在最后测一次；
-- 数据增强是最便宜的"更多数据"；
-- GPU 让实验从"跑不动"变成"可迭代"，但同样的思路在 CPU 上依然成立；
-- 学会用 sanity check（过拟合单 batch、数值梯度、期望值对照）快速定位实现错误。
-
-### 5. 从判别到生成，再到多模态
-从手写分类器一路走到扩散采样与 CLIP 检索，最大的收获不是某个模型，而是**一条连续的知识链**：损失函数 → 优化 → 表征 → 生成 → 对齐。课程末尾的这些现代模型，都是前面每个组件按新方式组合的结果。
 
 ---
 
