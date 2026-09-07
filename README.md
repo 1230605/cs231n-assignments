@@ -1,87 +1,117 @@
-# CS231n 2026 本地作业环境（Stanford CS231n: Deep Learning for Computer Vision）
+# CS231n Assignments (2026) · Deep Learning for Computer Vision
 
-本目录是三个 assignment 的本地工作区，环境已配置完毕，开箱即可用。
+Stanford CS231n 2026 三个编程作业的**完整实现与实验记录**（Assignment 1–3），覆盖从"手写 numpy 神经网络"到"Transformer / 对比学习 / 扩散模型 / CLIP 等现代深度学习范式"的完整链路。
 
-## 目录结构
+> Completed implementation & experiments for Stanford CS231n (2026) assignments. All code is written to be runnable locally; notebooks are localized (Colab Drive cells replaced with local setup) and ship with executed outputs.
+
+---
+
+## Overview · 项目简介
+
+本项目是 CS231n 2026 课程三个 assignment 的独立完成版，包含全部待实现函数的代码、notebook 输出与 Inline Questions 解答：
+
+| | 主题 | 覆盖内容 |
+|---|---|---|
+| **Assignment 1** | 图像分类与全连接网络 | kNN、Softmax/SVM、Two-Layer Net、Image Features、任意深度 FC Nets 与多种优化器 |
+| **Assignment 2** | 卷积网络与 PyTorch | BatchNorm / LayerNorm / Dropout / ConvNet（手写）、PyTorch 三层抽象（裸张量 → nn.Module → nn.Sequential）、Part V 开放挑战 |
+| **Assignment 3** | 现代生成与多模态模型 | Transformer 图像描述与 ViT、SimCLR 自监督、DDPM 扩散生成、CLIP 零样本/检索与 DINO 分割 |
+
+主要亮点结果：
+
+| 任务 | 结果 |
+|---|---|
+| A1 kNN / Softmax / Two-Layer / FC 全链 | 全部达标（验证集 36% → 52% → 54.8% 等） |
+| A2 PyTorch Part V（深层 CNN + 增强 + Adam） | 测试集 **83.6%** |
+| A3 ViT（2 epoch CIFAR-10） | 测试 **45.6%** |
+| A3 SimCLR 自监督（+线性评估） | 最佳 Top-1 **81.1%** |
+| A3 DDPM | 完成采样与 Classifier-Free Guidance |
+| A3 CLIP | 文本-图像相似度误差 ~1e-5，零样本分类与检索可用 |
+
+---
+
+## Repository Layout · 目录结构
 
 ```
-E:\ScaleLab\CS231n\project\
-├── assignments\
-│   ├── assignment1\   # Q1 kNN, Q2 Softmax, Q3 Two-Layer Net, Q4 Features, Q5 FC Nets
-│   ├── assignment2\   # BatchNorm, Dropout, ConvNet, PyTorch-CIFAR10, RNN Captioning
-│   └── assignment3\   # Transformer Captioning, Self-Supervised, DDPM, CLIP/DINO
-├── data\              # 数据集缓存（CIFAR-10 重建产物、COCO zip、ImageNet val）
-├── scripts\           # 环境/数据/notebook 本地化脚本
-├── .envs\cs231n\      # conda 虚拟环境（Python 3.11 + PyTorch cu130），已 gitignore
-├── requirements.txt   # 依赖清单（可重建环境）
+.
+├── assignments/
+│   ├── assignment1/   # kNN / Softmax / FC Nets / Features
+│   ├── assignment2/   # BatchNorm / Dropout / ConvNet / PyTorch / RNN
+│   └── assignment3/   # Transformer / SimCLR / DDPM / CLIP·DINO
+├── scripts/           # 环境与数据准备脚本
+├── .envs/cs231n/      # conda 环境（不入库）
+├── data/              # 数据集缓存（不入库）
 └── README.md
 ```
 
-## 环境概况
+每个 assignment 自带完整的 `cs231n/` 课程代码包；学生需要实现的函数均以 `TODO` 标注并已填写完成。`collect_submission.ipynb` 用于生成 Gradescope 提交包。
 
-- Python 3.11（conda，位于 `.envs\cs231n`，全部在 E 盘）
-- PyTorch 2.13.0 + CUDA 13.0（支持本机 RTX 5060，已实测 `torch.cuda.is_available() == True`）
-- torchvision 0.28.0、OpenAI CLIP、Cython、opencv、decord、pyarrow、jupyter 等
+---
 
-## 快速开始
+## Environment · 运行环境
 
-方式一（推荐，使用 Jupyter Notebook）：
+- Python 3.11（conda，`./.envs/cs231n`）
+- PyTorch 2.13 + CUDA 13.0（NVIDIA RTX 5060 实测可用）
+- torchvision / clip / einops / h5py / opencv / scikit-learn 等（见 `requirements.txt`）
+- Jupyter kernel `cs231n`（已注册，指向本地 E 盘环境）
 
-```powershell
-# 在项目根目录启动（注意：务必用 E 盘环境里的 python）
-& "E:\ScaleLab\CS231n\project\.envs\cs231n\python.exe" -m jupyter notebook "E:\ScaleLab\CS231n\project\assignments"
-```
+运行方式：用 VS Code 打开本仓库根目录，打开任一 `*.ipynb`，选择内核 `Python 3.11 (cs231n)` 后按顺序执行即可。notebook 已包含执行输出，也可 `Kernel → Restart & Run All` 重新训练。
 
-方式二（JupyterLab）：
+> 说明：数据集、预训练权重、conda 环境等大文件均不入库（见 `.gitignore`），本地按各 assignment 的 `cs231n/datasets` 与 `scripts/` 说明准备即可。
 
-```powershell
-& "E:\ScaleLab\CS231n\project\.envs\cs231n\python.exe" -m jupyter lab "E:\ScaleLab\CS231n\project\assignments"
-```
+---
 
-打开任意作业的 notebook（已默认绑定 `Python 3.11 (cs231n)` 内核），从第一个单元格开始依次运行即可。
+## Highlights · 学习要点（按 Assignment）
 
-## 数据集
+### Assignment 1 —— 亲手写出深度学习的每一行
+- kNN：三种距离实现体会向量化（13.9s → 31.5s → 0.09s 的实测对比）；
+- Softmax：解析梯度推导 `p − onehot` 与数值梯度互验；
+- Two-Layer / FC Nets：模块化 `forward/backward + cache`、链式法则、L2 正则（0.5 约定）、SGD → Momentum → RMSProp → Adam；
+- Features：HOG + HSV 直方图，直观感受"特征工程 vs 原始像素"。
 
-| 数据集 | 位置 | 说明 |
-|---|---|---|
-| CIFAR-10 | 每个作业的 `cs231n\datasets\cifar-10-batches-py`；assignment3 另有 `data\cifar-10-batches-py` | 已就绪 |
-| COCO Captioning | assignment2/3 的 `cs231n\datasets\coco_captioning` | 需解压 `data\coco_captioning.zip`（脚本已处理） |
-| ImageNet val (25张) | assignment2/3 的 `cs231n\datasets\imagenet_val_25.npz` | 已就绪 |
+### Assignment 2 —— 现代网络的组件库
+- BatchNorm / LayerNorm / Dropout / Conv / Pool / Spatial-BN / GroupNorm 全部手写并通过梯度检查；
+- PyTorch 三层次抽象：同一网络分别用裸张量、`nn.Module`、`nn.Sequential` 实现，目标从 42% 提升到 55%（动量 + 更好初始化）；
+- 开放挑战中通过"加深 + BatchNorm + 数据增强 + Adam"在 10 epoch 内把 CIFAR-10 验证集推到 80%+。
 
-CIFAR-10 说明：官方下载源在国内极慢，本环境改为从 HuggingFace 镜像下载官方 parquet，
-再用 `scripts\build_cifar10.py` 无损重建为标准 `cifar-10-batches-py` 格式（像素值与官方一致）。
+### Assignment 3 —— 现代生成与多模态
+- Transformer：QKV 多头注意力、位置编码、Decoder/Encoder、ViT；
+- SimCLR：InfoNCE 对比损失与自监督表征，线性评估 81%；
+- DDPM：加噪/去噪、UNet、Classifier-Free Guidance；
+- CLIP：图文共享空间中的相似度、零样本分类与图像检索；DINO patch 特征的可视化与分割。
 
-## 对官方 notebook 做的本地化改动
+---
 
-1. 每个 notebook 第一个“挂载 Google Drive”的单元格已被替换为本地路径设置（设置 sys.path / 工作目录）。
-2. 用 torchvision 的 notebook（PyTorch、Self-Supervised Learning、Transformer Captioning）
-   注入了一个“本地数据补丁”单元格，让 torchvision 直接读取本地 CIFAR-10，避免触发慢速下载。
-3. DDPM / CLIP_DINO 中写死 `/content/drive/...` 的输出路径已改为本地相对路径。
-4. ConvolutionalNetworks 里的 Cython 编译单元已改为本地路径 + 当前解释器；
-   若本机没有 MSVC 编译器导致编译失败，可跳过该单元，程序会自动使用纯 Python 的 im2col 实现。
+## Reflections · 心得体会
 
-原始未修改的 notebook 在 `E:\ScaleLab\CS231n\cs231n.github.io-master\assignments\2026\*.zip` 中，
-如需恢复或将来在 Colab 上做最终提交，可从 zip 重新解压。
+### 1. 亲手实现，才能真正读懂框架
+在 Assignment 1–2 中手写了反向传播、卷积、归一化与 dropout 之后，PyTorch 里的 `loss.backward()`、`nn.Conv2d` 与 `nn.BatchNorm2d` 不再是黑盒——你能在脑海里看见它们在做什么，出问题时也知道去哪找。
 
-## 注意事项
+### 2. 抽象层次决定了"便利"与"灵活"的取舍
+Barebones → `nn.Module` → `nn.Sequential` 的递进让我理解了框架的边界：它替你管理参数、自动求导与训练循环，但复杂拓扑（分支、共享层）仍需要自定义 `forward`。学会在正确的层次工作，比死记 API 更重要。
 
-- assignment3 的 CLIP / DINO 部分首次运行需要联网下载模型权重（OpenAI CLIP、facebookresearch/dino），
-  之后会缓存在本机。
-- `collect_submission.ipynb` 是提交用脚本，保留了 Colab 原版（生成 zip + PDF 并上传 Gradescope），
-  本地运行不需要它。
-- 训练较重的部分（如 Self-Supervised 完整训练、DDPM 5 万步）请按需调整参数，8GB 显存足够跑完本课程。
-- 若想重建环境：
+### 3. 小改进会叠加成质的飞跃
+同样的网络，仅在"加深 + BatchNorm + 更优优化器 + 数据增强"上做增量改进，CIFAR-10 就从 46% 涨到 83%+。调参最重要的纪律是：**一次只改一个变量，盯验证曲线而非只看最终数字**。
 
-```powershell
-conda create -p "E:\ScaleLab\CS231n\project\.envs\cs231n" python=3.11 -y --override-channels -c conda-forge
-"E:\ScaleLab\CS231n\project\.envs\cs231n\python.exe" -m pip install -r requirements.txt
-"E:\ScaleLab\CS231n\project\.envs\cs231n\python.exe" -m pip install torch==2.13.0+cu130 torchvision==0.28.0+cu130 --index-url https://download.pytorch.org/whl/cu130
-"E:\ScaleLab\CS231n\project\.envs\cs231n\python.exe" -m pip install git+https://github.com/openai/CLIP.git
-```
+### 4. 工程纪律与泛化思维
+- 验证集用于反复调参，测试集只在最后测一次；
+- 数据增强是最便宜的"更多数据"；
+- GPU 让实验从"跑不动"变成"可迭代"，但同样的思路在 CPU 上依然成立；
+- 学会用 sanity check（过拟合单 batch、数值梯度、期望值对照）快速定位实现错误。
 
-## 快速验证环境
+### 5. 从判别到生成，再到多模态
+从手写分类器一路走到扩散采样与 CLIP 检索，最大的收获不是某个模型，而是**一条连续的知识链**：损失函数 → 优化 → 表征 → 生成 → 对齐。课程末尾的这些现代模型，都是前面每个组件按新方式组合的结果。
 
-```powershell
-& "E:\ScaleLab\CS231n\project\.envs\cs231n\python.exe" -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0))"
-```
+---
 
+## Notes · 环境与数据说明
+
+- CIFAR-10 由 HuggingFace parquet 无损重建为官方 pickle 布局（数据源不可达时的本地方案），并修复了早期重建中通道布局的问题；
+- 部分示例图片源（Flickr URL）已失效，相关 notebook 使用灰色占位图保证流程可运行；
+- DINO 官方权重源不可达时，从 HuggingFace 镜像加载；DAVIS 真实数据需要 `tensorflow-datasets`，缺失时使用合成视频回退演示完整流程；
+- 所有大文件与权重通过 `.gitignore` 排除，仓库仅保留代码与文档。
+
+---
+
+## Disclaimer · 声明
+
+本项目为个人学习产出，仅用于学习与交流。请遵守斯坦福课程 [Honor Code](https://communitystandards.stanford.edu/policies-and-guidance/honor-code) 与生成式 AI 使用政策；建议读者在理解后独立完成作业。
