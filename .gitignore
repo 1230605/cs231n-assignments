@@ -28,3 +28,13 @@ a3_inline_submission.pdf
 # 鏈満缂撳瓨涓庢満鍣ㄧ浉鍏抽厤缃紙涓嶅叆搴擄級
 .cache/
 .vscode/
+
+# A3 下载的权重与生成产物（留在本地）
+assignments/assignment3/pretrained_model/
+assignments/assignment3/cs231n/exp/
+assignments/assignment3/cs231n/datasets/dino_vits8_hf.bin
+assignments/assignment3/cs231n/datasets/emoji_data.npz
+assignments/assignment3/cs231n/datasets/text_embeddings.pt
+assignments/assignment3/dino_res.mp4
+assignments/assignment2/cs231n/build/
+assignments/assignment2/cs231n/im2col_cython.c
